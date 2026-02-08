@@ -1,3 +1,5 @@
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using HarmonyLib;
 using KMod;
@@ -62,6 +64,41 @@ namespace SealedInsulatedDoor
     [HarmonyPatch(typeof(Db), "Initialize")]
     public class Db_Initialize_Patch
     {
+
+    internal static class TechRegistrationCompat
+    {
+        internal static void AddUnlockedItemIdIfMissing(Tech tech, string buildingId)
+        {
+            var field = tech.GetType().GetField("unlockedItemIDs");
+            var unlocked = field == null ? null : field.GetValue(tech) as IList;
+            if (unlocked == null)
+                return;
+
+            Type elementType = null;
+            var listType = unlocked.GetType();
+            if (listType.IsGenericType)
+            {
+                var args = listType.GetGenericArguments();
+                if (args.Length == 1)
+                    elementType = args[0];
+            }
+
+            object valueToAdd = null;
+            if (elementType == typeof(string))
+                valueToAdd = buildingId;
+            else if (elementType == typeof(int))
+                valueToAdd = buildingId.GetHashCode();
+            else
+                return;
+
+            foreach (var item in unlocked)
+                if (Equals(item, valueToAdd))
+                    return;
+
+            unlocked.Add(valueToAdd);
+        }
+    }
+
         public static void Prefix()
         {
             // Register English first as fallback
@@ -74,11 +111,11 @@ namespace SealedInsulatedDoor
         public static void Postfix()
         {
             var tech = Db.Get().Techs.TryGet("TemperatureModulation");
-            if (tech != null && !tech.unlockedItemIDs.Contains(SealedInsulatedDoorConfig.ID))
-                tech.unlockedItemIDs.Add(SealedInsulatedDoorConfig.ID);
+            if (tech != null)
+                TechRegistrationCompat.AddUnlockedItemIdIfMissing(tech, SealedInsulatedDoorConfig.ID);
 
-            if (!TUNING.BUILDINGS.PLANORDER.ContainsKey("Base") || !TUNING.BUILDINGS.PLANORDER["Base"].Contains(SealedInsulatedDoorConfig.ID))
-                ModUtil.AddBuildingToPlanScreen("Base", SealedInsulatedDoorConfig.ID, "doors", "PressureDoor");
+            // Keep direct registration for compatibility across ONI API variants.
+            ModUtil.AddBuildingToPlanScreen("Base", SealedInsulatedDoorConfig.ID, "doors", "PressureDoor");
 
             // Now check locale and override if Chinese
             var locale = Localization.GetLocale();
