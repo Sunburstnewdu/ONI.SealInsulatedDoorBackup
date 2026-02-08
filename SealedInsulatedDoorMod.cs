@@ -25,7 +25,7 @@ namespace SealedInsulatedDoor
             if (__instance == null || cells == null) return;
 
             var prefabID = __instance.GetComponent<KPrefabID>();
-            if (prefabID == null || prefabID.PrefabTag != SealedInsulatedDoorConfig.ID) return;
+            if (prefabID == null || prefabID.PrefabTag != (Tag)SealedInsulatedDoorConfig.ID) return;
 
             foreach (int cell in cells)
             {
@@ -45,7 +45,7 @@ namespace SealedInsulatedDoor
             if (__instance == null) return;
 
             var prefabID = __instance.GetComponent<KPrefabID>();
-            if (prefabID == null || prefabID.PrefabTag != SealedInsulatedDoorConfig.ID) return;
+            if (prefabID == null || prefabID.PrefabTag != (Tag)SealedInsulatedDoorConfig.ID) return;
 
             if (__instance.building == null || __instance.building.PlacementCells == null) return;
 
@@ -73,8 +73,12 @@ namespace SealedInsulatedDoor
 
         public static void Postfix()
         {
-            Db.Get().Techs.TryGet("TemperatureModulation")?.unlockedItemIDs.Add(SealedInsulatedDoorConfig.ID);
-            ModUtil.AddBuildingToPlanScreen("Base", SealedInsulatedDoorConfig.ID, "doors", "PressureDoor");
+            var tech = Db.Get().Techs.TryGet("TemperatureModulation");
+            if (tech != null && !tech.unlockedItemIDs.Contains(SealedInsulatedDoorConfig.ID))
+                tech.unlockedItemIDs.Add(SealedInsulatedDoorConfig.ID);
+
+            if (!TUNING.BUILDINGS.PLANORDER.ContainsKey("Base") || !TUNING.BUILDINGS.PLANORDER["Base"].Contains(SealedInsulatedDoorConfig.ID))
+                ModUtil.AddBuildingToPlanScreen("Base", SealedInsulatedDoorConfig.ID, "doors", "PressureDoor");
 
             // Now check locale and override if Chinese
             var locale = Localization.GetLocale();
