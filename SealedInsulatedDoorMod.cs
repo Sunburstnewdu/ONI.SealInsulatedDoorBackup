@@ -60,6 +60,18 @@ namespace SealedInsulatedDoor
         }
     }
 
+
+    // 全局防护：某些门在工作动画覆盖为空时会触发 AddAnimOverrides(null) 并崩溃。
+    [HarmonyPatch(typeof(KAnimControllerBase), "AddAnimOverrides", new[] { typeof(KAnimFile), typeof(float) })]
+    public static class KAnimControllerBase_AddAnimOverrides_Patch
+    {
+        public static bool Prefix(KAnimFile kanim_file)
+        {
+            // Skip null overrides to prevent NullReferenceException in worker StartWork.
+            return kanim_file != null;
+        }
+    }
+
     // 注册建筑和本地化
     [HarmonyPatch(typeof(Db), "Initialize")]
     public class Db_Initialize_Patch
