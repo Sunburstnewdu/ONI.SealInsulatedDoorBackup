@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TUNING;
 using UnityEngine;
 using PeterHan.PLib.Options;
@@ -57,14 +58,25 @@ namespace SealedInsulatedDoor
             go.GetComponent<AccessControl>().controlEnabled = true;
             go.GetComponent<KBatchedAnimController>().initialAnim = "closed";
 
-            // Add work animation overrides to prevent null anim crash when dupes interact
+            // Ensure worker override anims never contain null entries, otherwise StartWork can crash.
             Door door = go.GetComponent<Door>();
             if (door != null)
             {
                 KAnimFile overrideAnim = Assets.GetAnim("anim_use_remote_kanim");
                 if (overrideAnim != null)
                 {
-                    door.overrideAnims = new KAnimFile[] { overrideAnim };
+                    door.overrideAnims = new[] { overrideAnim };
+                }
+                else
+                {
+                    var sanitized = new List<KAnimFile>();
+                    if (door.overrideAnims != null)
+                    {
+                        foreach (var anim in door.overrideAnims)
+                            if (anim != null)
+                                sanitized.Add(anim);
+                    }
+                    door.overrideAnims = sanitized.ToArray();
                 }
             }
         }
